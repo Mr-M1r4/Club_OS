@@ -1,4 +1,4 @@
-# NEXOSPORT CLUB — Logo upload repair
+# Club OS — Logo upload repair
 
 ## Problem
 Club administrators can fail to upload or replace their club logo from **Configuración → Identidad del club**.
