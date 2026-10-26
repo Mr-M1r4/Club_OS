@@ -76,12 +76,12 @@ export default function App(){
   location.reload()
  }
 
- if(loading)return <div className="splash"><div><img src={base+'/logo.jpg'} className="brand brand-lg"/><p>Cargando NEXOSPORT CLUB…</p></div></div>
+ if(loading)return <div className="splash"><div><div className="brand brand-lg brand-text">NEXOSPORT CLUB</div><p>Cargando NEXOSPORT CLUB…</p></div></div>
  if(!session)return <Login base={base}/>
 
- return <div className="app" style={{'--img-textura':'url('+base+'/textura.jpg)','--img-lineas':'url('+base+'/lineas.png)'} as any}>
+ return <div className="app" style={{'--img-textura':'url('+base+'/fondoTextura.png)','--img-lineas':'url('+base+'/lineas.png)'} as any}>
   <aside>
-   <img className="brand" src={base+'/logo.jpg'} alt="NEXOSPORT CLUB"/>
+   <div className="brand brand-text">NEXOSPORT CLUB</div>
    <small>CLUB OS · {role.toUpperCase()}</small>
    <nav>{nav.map((n:string)=><button key={n} className={tab===n?'active':''} onClick={()=>setTab(n)}>{labels[n]}</button>)}</nav>
    <div className="sidebottom"><span>{session.user.email}</span><button onClick={()=>supabase.auth.signOut()}>Cerrar sesión</button></div>
