@@ -1,7 +1,7 @@
-# RIVER Club OS — Documentación de producto
+# RIVER ClubOS — Documentación de producto
 
 ## 1. Propósito
-RIVER Club OS es un sistema de gestión para clubes deportivos. Su núcleo es administrativo: deportistas, membresías, caja, inventario, personal, equipos, asistencia, cartera, comunicaciones, reportes y auditoría.
+RIVER ClubOS es un sistema de gestión para clubes deportivos. Su núcleo es administrativo: deportistas, membresías, caja, inventario, personal, equipos, asistencia, cartera, comunicaciones, reportes y auditoría.
 
 **No es una pasarela de pagos ni un e-commerce.** Las ventas de productos son salidas de inventario registradas internamente. El método de pago y la referencia son datos administrativos.
 
