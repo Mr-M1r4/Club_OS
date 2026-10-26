@@ -1,4 +1,4 @@
-# RIVER Club OS — Manual operativo y QA
+# RIVER ClubOS — Manual operativo y QA
 
 ## Flujos críticos
 
