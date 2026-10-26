@@ -1,4 +1,4 @@
-name: Deploy NEXOSPORT CLUB
+name: Deploy Club OS
 on:
   push:
     branches: [main]
