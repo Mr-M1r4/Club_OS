@@ -1,4 +1,4 @@
-# Club OS — Logo upload repair
+# ClubOS — Logo upload repair
 
 ## Problem
 Club administrators can fail to upload or replace their club logo from **Configuración → Identidad del club**.
