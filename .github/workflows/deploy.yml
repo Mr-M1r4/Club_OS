@@ -1,4 +1,4 @@
-name: Deploy Club OS
+name: Deploy ClubOS
 on:
   push:
     branches: [main]
