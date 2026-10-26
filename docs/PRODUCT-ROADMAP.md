@@ -1,4 +1,4 @@
-# RIVER Club OS — Plan de producto comercial
+# RIVER ClubOS — Plan de producto comercial
 
 ## Visión
 Convertir la implementación de RIVER en un producto SaaS configurable para clubes deportivos pequeños y medianos.
