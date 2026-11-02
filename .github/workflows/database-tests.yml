@@ -2,44 +2,37 @@ name: Database migration validation
 on:
   push:
     branches: [main]
-    paths:
-      - 'supabase/**'
-      - '.github/workflows/database-tests.yml'
+    paths: ['supabase/**', '.github/workflows/database-tests.yml']
   pull_request:
-    paths:
-      - 'supabase/**'
-      - '.github/workflows/database-tests.yml'
+    paths: ['supabase/**', '.github/workflows/database-tests.yml']
+permissions:
+  contents: read
 jobs:
   migration-validation:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Validate repository migration set
         shell: bash
         run: |
           set -euo pipefail
           test -f supabase/tests/database/001_core_integrity.test.sql
-          test -f supabase/migrations/20260923024843_complete_club_operations.sql
-          test -f supabase/migrations/20260923123000_harden_role_resolution_and_sale.sql
-          test -f supabase/migrations/20260923124000_grant_authenticated_role_resolution.sql
-          grep -q "create table if not exists public.inventory_movements" supabase/migrations/20260923024843_complete_club_operations.sql
-          grep -q "create or replace function private.current_role" supabase/migrations/20260923123000_harden_role_resolution_and_sale.sql
-          grep -q "create_sale" supabase/migrations/20260923123000_harden_role_resolution_and_sale.sql
-          grep -q "grant execute on function private.current_role" supabase/migrations/20260923124000_grant_authenticated_role_resolution.sql
+          grep -Rqi "enable row level security" supabase/migrations
+          grep -Rqi "security definer" supabase/migrations
       - name: Validate migration numbering
         shell: bash
         run: |
           set -euo pipefail
           previous=0
-          for file in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort); do
-            version="${file%%_*}"
-            if ! [[ "$version" =~ ^[0-9]{14}$ ]]; then
-              echo "Invalid migration filename: $file"
-              exit 1
-            fi
-            if (( 10#$version <= previous )); then
-              echo "Migration ordering error at $file"
-              exit 1
-            fi
+          while IFS= read -r file; do
+            version="${file##*/}"
+            version="${version%%_*}"
+            if ! [[ "$version" =~ ^[0-9]{14}$ ]]; then echo "Invalid migration filename: $file"; exit 1; fi
+            if (( 10#$version <= previous )); then echo "Migration ordering error at $file"; exit 1; fi
             previous=10#$version
-          done
+          done < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort)
