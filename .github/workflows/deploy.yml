@@ -31,8 +31,8 @@ jobs:
       - name: Build static site
         run: npm run build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://ewsygagytkicxdhykjfw.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_7lsAhSgheKjMpsBPGPYZKA_jzXrAASH' }}
   deploy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: verify
