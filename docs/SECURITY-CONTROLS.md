@@ -61,3 +61,7 @@ System boundary: Next.js static frontend on GitHub Pages; Supabase Auth, Postgre
 
 ## Review cadence
 Continuous CI/advisories; monthly vulnerability, incident and backup review; quarterly access recertification and vendor/risk review; annual policy, restore and incident exercises.
+
+## Platform version note
+
+The linked production Supabase project was observed on PostgreSQL 17.6.1.166 (2026-11-01). Supabase announced PostgreSQL 17.11 minor updates on 2026-09-25 that address 44 CVEs. Treat the managed database upgrade as a high-priority platform maintenance item: review Supabase release notes, extension/index impact and maintenance window, confirm backup/PITR coverage, then upgrade through the Supabase dashboard and run smoke tests. This was not changed automatically because the managed upgrade can affect availability and indexes.
