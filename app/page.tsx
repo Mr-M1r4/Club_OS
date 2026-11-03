@@ -76,7 +76,8 @@ export default function App(){
   location.reload()
  }
 
- if(recoveryMode)return <ResetPassword base={base} onDone={()=>{setRecoveryMode(false);setSession(null)}}/>\n if(loading)return <div className="splash"><div><div className="brand brand-lg brand-text">ClubOS</div><p>Cargando ClubOS…</p></div></div>
+ if(recoveryMode)return <ResetPassword base={base} onDone={()=>{setRecoveryMode(false);setSession(null)}}/>
+ if(loading)return <div className="splash"><div><div className="brand brand-lg brand-text">ClubOS</div><p>Cargando ClubOS…</p></div></div>
  if(!session)return <Login base={base}/>
 
  return <div className="app" style={{'--img-textura':'url('+base+'/fondoTextura.png)','--img-lineas':'url('+base+'/lineas.png)'} as any}>
