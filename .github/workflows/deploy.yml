@@ -32,7 +32,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://ewsygagytkicxdhykjfw.supabase.co
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7lsAhSgheKjMpsBPGPYZKA_jzXrAASH
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3c3lnYWd5dGtpY3hkaHlramZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMDgyMjgsImV4cCI6MjEwNTU4NDIyOH0.JcfOgSDneq8qXWJOf_2SfqCqbQdvVWrTyNw4rMgJdEs
   deploy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: verify
@@ -59,7 +59,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://ewsygagytkicxdhykjfw.supabase.co
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7lsAhSgheKjMpsBPGPYZKA_jzXrAASH
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3c3lnYWd5dGtpY3hkaHlramZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMDgyMjgsImV4cCI6MjEwNTU4NDIyOH0.JcfOgSDneq8qXWJOf_2SfqCqbQdvVWrTyNw4rMgJdEs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
