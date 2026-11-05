@@ -140,13 +140,13 @@ function buildReceiptPdf({record,party,club,concept,period}:any){
  let y=748;
  for(const [label,size] of rows.slice(1)){commands.push('BT',`/F1 ${size} Tf`, `50 ${y} Td`, '('+esc(label)+') Tj','ET');y-=34;}
  commands.push('0.8 w','50 625 m','545 625 l','S','BT','/F1 12 Tf','50 585 Td','(TOTAL) Tj','ET','BT','/F1 24 Tf','50 545 Td','('+esc(money(record.amount))+') Tj','ET','BT','/F1 9 Tf','50 70 Td','(Documento generado por ClubOS) Tj','ET');
- const stream=commands.join('\\n');
- const objects=[ '<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',`<< /Length ${new TextEncoder().encode(stream).length} >>\\nstream\\n${stream}\\nendstream`];
- let pdf='%PDF-1.4\\n';const offsets=[0];
- objects.forEach((obj,i)=>{offsets.push(new TextEncoder().encode(pdf).length);pdf+=`${i+1} 0 obj\\n${obj}\\nendobj\\n`;});
- const xref=new TextEncoder().encode(pdf).length;pdf+=`xref\\n0 ${objects.length+1}\\n0000000000 65535 f \\n`;
- for(const off of offsets.slice(1))pdf+=String(off).padStart(10,'0')+' 00000 n \\n';
- pdf+=`trailer\\n<< /Size ${objects.length+1} /Root 1 0 R >>\\nstartxref\\n${xref}\\n%%EOF`;
+ const stream=commands.join('\n');
+ const objects=[ '<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',`<< /Length ${new TextEncoder().encode(stream).length} >>\nstream\n${stream}\nendstream`];
+ let pdf='%PDF-1.4\n';const offsets=[0];
+ objects.forEach((obj,i)=>{offsets.push(new TextEncoder().encode(pdf).length);pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;});
+ const xref=new TextEncoder().encode(pdf).length;pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
+ for(const off of offsets.slice(1))pdf+=String(off).padStart(10,'0')+' 00000 n \n';
+ pdf+=`trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
  return new Blob([new TextEncoder().encode(pdf)],{type:'application/pdf'});
 }
 function Receipt({title,party,club,clubLogo,record,concept,period,contactEmail,contactPhone,onClose}:any){
