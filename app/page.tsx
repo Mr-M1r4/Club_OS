@@ -133,8 +133,8 @@ export default function App(){
 }
 
 function buildReceiptPdf({record,party,club,concept,period}:any){
- const clean=(value:any)=>String(value??'').normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^\\x20-\\x7E]/g,' ').replace(/\\s+/g,' ').trim();
- const esc=(value:any)=>clean(value).replace(/\\\\/g,'\\\\\\\\').replace(/\\(/g,'\\\\(').replace(/\\)/g,'\\\\)');
+ const clean=(value:any)=>String(value??'').normalize('NFKD').replace(/[^ -~]/g,' ').trim();
+ const slash=String.fromCharCode(92);const esc=(value:any)=>clean(value).split(slash).join(slash+slash).split('(').join(slash+'(').split(')').join(slash+')');
  const rows=[['COMPROBANTE DE PAGO',22],['Club: '+(club||'ClubOS'),15],['Referencia: '+(record.reference||'—'),12],['Fecha: '+(record.paid_at?.slice(0,10)||today()),12],['Estado: CONFIRMADO',12],['Pagado por: '+(party||'—'),12],['Concepto: '+(concept||'Pago'),12],...(period?[['Periodo: '+period,12]]:[]),['Metodo: '+(record.method||'—'),12]];
  const commands=['BT','/F1 22 Tf','50 790 Td','('+esc(rows[0][0])+') Tj','ET'];
  let y=748;
