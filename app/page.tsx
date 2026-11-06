@@ -47,7 +47,7 @@ export default function App(){
   if(user){
    const prf=await supabase.from('profiles').select('role,active_club_id').eq('id',user.id).maybeSingle()
    const cm=prf.data?.active_club_id?await supabase.from('club_memberships').select('role').eq('club_id',prf.data.active_club_id).eq('user_id',user.id).eq('active',true).maybeSingle():{data:null}
-   setRole(cm.data?.role||prf.data?.role||'staff')
+   setRole(cm.data?.role||'staff')
    const me=(s.data||[]).find((x:Row)=>x.email?.toLowerCase()===user.email?.toLowerCase())
    setStaffRole(me?.role||'')
    setIsPlatformAdmin((pa.data||[]).some((x:Row)=>x.user_id===user.id))
