@@ -65,3 +65,26 @@ Continuous CI/advisories; monthly vulnerability, incident and backup review; qua
 ## Platform version note
 
 The linked production Supabase project was observed on PostgreSQL 17.6.1.166 (2026-11-01). Supabase announced PostgreSQL 17.11 minor updates on 2026-09-25 that address 44 CVEs. Treat the managed database upgrade as a high-priority platform maintenance item: review Supabase release notes, extension/index impact and maintenance window, confirm backup/PITR coverage, then upgrade through the Supabase dashboard and run smoke tests. This was not changed automatically because the managed upgrade can affect availability and indexes.
+
+## Production hardening applied 2026-11-05
+
+The following controls were implemented against the linked production project and mirrored in the security hardening branch:
+
+- Tenant resolution now returns the active club only when the authenticated user has an active `club_memberships` row for that club, or is a platform administrator. This prevents a still-valid JWT from retaining tenant reads after an administrator disables that membership.
+- Product image writes, updates and deletes now require the first object path segment to equal the active club ID and the second segment to be `products`. The frontend now uploads new images under `<club-id>/products/<uuid>.<ext>`. Existing public product image URLs remain readable; legacy unscoped objects are no longer mutable by ordinary club users.
+- Revoked `TRUNCATE`, `TRIGGER` and `REFERENCES` table privileges from `anon` and `authenticated` on current public tables and from future tables created with the current default privileges.
+- Hardened `admin-users` and `membership-reminders` Edge Functions: strict active-club authorization for user administration, bounded request bodies, validated action inputs, least-information error responses, no-store responses, and an explicit CORS origin allowlist. Both functions retain JWT verification.
+- Added database regression tests for active membership resolution, RLS coverage, the security-invoker arrears view, product-image path isolation and dangerous table privileges.
+
+Verification performed against production:
+- PostgreSQL 17.6.1.166; all inspected public tables have RLS enabled.
+- The `membership_arrears` view has `security_invoker=true`.
+- A transaction-scoped negative test simulated disabling an active membership under an authenticated JWT. The active-club resolver returned NULL and the test user saw zero athlete rows; the transaction was rolled back.
+- Product-image policies and grants were inspected after migration.
+- Edge Functions were redeployed with JWT verification enabled.
+
+Remaining operational items:
+- Supabase Security Advisor still reports five authenticated-callable `SECURITY DEFINER` RPCs. These are intentional RPC entry points with explicit identity/role/club checks and fixed empty `search_path`; keep their negative authorization tests and review each code change. Do not switch them to SECURITY INVOKER without first redesigning the associated table permissions.
+- Leaked-password protection remains OPEN. It must be enabled in Supabase Dashboard > Authentication > Settings > Password Security (availability depends on the Supabase plan); verify the Advisor clears after enabling.
+- Organization/account MFA, app-level MFA enforcement, SSL/network restrictions, backup restore, GitHub branch protection, secret scanning and incident tabletop require separate account/operational verification.
+- GitHub Pages cannot set arbitrary response headers. A strong HTTP response-header CSP/HSTS policy must be configured at a reverse proxy/custom host if required; do not claim these headers are enforced by GitHub Pages.
