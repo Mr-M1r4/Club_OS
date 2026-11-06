@@ -61,7 +61,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://ewsygagytkicxdhykjfw.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3c3lnYWd5dGtpY3hkaHlramZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMDgyMjgsImV4cCI6MjEwNTU4NDIyOH0.JcfOgSDneq8qXWJOf_2SfqCqbQdvVWrTyNw4rMgJdEs
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ./out
       - name: Deploy to GitHub Pages
