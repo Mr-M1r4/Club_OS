@@ -174,7 +174,30 @@ function PlanForm({f,setF,close}:any){return <div className="formgrid"><label>No
 function Events({data,canManage,onEdit,onDelete}:any){const events=data.events||[];return <section><div className="sectionhead"><div><h2>Eventos</h2><small>Actividades especiales, torneos, reuniones y otros eventos del club.</small></div></div>{events.length?<Table head={['Evento','Fecha','Horario','Lugar','Personas','Estado','Descripción','Acción']} rows={events.map((e:Row)=>[e.name,e.event_date,(e.start_time||'')+(e.end_time?' → '+e.end_time:''),e.location||'—',e.expected_people??'—',e.status==='scheduled'?'Programado':e.status==='completed'?'Realizado':'Cancelado',e.description||'—',canManage?<div className="actions"><button onClick={()=>onEdit(e)}>Editar</button><button onClick={()=>onDelete(e)}>Eliminar</button></div>:null])}/>:<Empty text="No hay eventos registrados."/>}</section>}
 function EventForm({f,setF,close}:any){return <div className="formgrid"><label>Nombre del evento<input placeholder="Ej.: Torneo interno, clínica, reunión…" value={f.name||''} onChange={e=>setF({...f,name:e.target.value})}/></label><label>Fecha<input type="date" value={f.event_date||today()} onChange={e=>setF({...f,event_date:e.target.value})}/></label><label>Inicio<input type="time" value={f.start_time||''} onChange={e=>setF({...f,start_time:e.target.value})}/></label><label>Fin<input type="time" value={f.end_time||''} onChange={e=>setF({...f,end_time:e.target.value})}/></label><label>Lugar<input placeholder="Cancha, sede, salón…" value={f.location||''} onChange={e=>setF({...f,location:e.target.value})}/></label><label>Cantidad de personas<input type="number" min="0" value={f.expected_people??''} onChange={e=>setF({...f,expected_people:e.target.value})}/></label><label>Estado<select value={f.status||'scheduled'} onChange={e=>setF({...f,status:e.target.value})}><option value="scheduled">Programado</option><option value="completed">Realizado</option><option value="cancelled">Cancelado</option></select></label><label>Descripción / detalles<textarea rows={5} placeholder="Detalla cantidad de personas, logística, materiales, instrucciones, horarios, responsables u otra información relevante…" value={f.description||''} onChange={e=>setF({...f,description:e.target.value})}/></label><button onClick={async()=>{if(!f.name?.trim())return alert('El nombre del evento es obligatorio');if(!f.event_date)return alert('La fecha del evento es obligatoria');const payload={name:f.name.trim(),event_date:f.event_date,start_time:f.start_time||null,end_time:f.end_time||null,location:f.location?.trim()||null,description:f.description?.trim()||null,expected_people:f.expected_people===''||f.expected_people==null?null:Number(f.expected_people),status:f.status||'scheduled'};if(payload.expected_people!==null&&(!Number.isInteger(payload.expected_people)||payload.expected_people<0))return alert('La cantidad de personas debe ser un número entero igual o mayor que cero');const r=f.id?await supabase.from('events').update(payload).eq('id',f.id):await supabase.from('events').insert(payload);if(r.error)return alert(r.error.message);close();location.reload()}}>{f.id?'Guardar cambios':'Crear evento'}</button></div>}
 function Memberships({data,onRenew}:any){return <Table head={['Deportista','Plan','Inicio','Vence','Estado','Acción']} rows={data.memberships.map((m:Row)=>{const a=data.athletes.find((x:Row)=>x.id===m.athlete_id),p=data.plans.find((x:Row)=>x.id===m.plan_id);return [a?.full_name||'—',p?.name||'—',m.start_date,m.end_date,<span className={daysLeft(m.end_date)<=7?'warn':''}>{m.status}</span>,m.status==='active'?<button onClick={()=>onRenew(m)}>Renovar</button>:null]})}/>}
-function Payments({data,canManage,onEdit}:any){const [receipt,setReceipt]=useState<Row|null>(null);return <><div className="stats three"><Card n={money(data.payments.filter((p:Row)=>p.status==='confirmed'&&p.paid_at?.slice(0,7)===today().slice(0,7)).reduce((n:number,p:Row)=>n+Number(p.amount),0))} l="Recaudo del mes"/><Card n={data.payments.filter((p:Row)=>p.status==='pending').length} l="Pagos pendientes"/><Card n={data.payments.length} l="Movimientos"/></div><Table head={['Fecha','Deportista','Concepto','Método','Valor','Estado','Comprobante','Edición']} rows={data.payments.map((p:Row)=>{const a=data.athletes.find((x:Row)=>x.id===p.athlete_id);return [p.paid_at?.slice(0,10)||p.created_at?.slice(0,10),a?.full_name||'—',p.concept,p.method||'—',money(p.amount),p.status,p.status==='confirmed'?<button onClick={()=>setReceipt({record:p,party:a?.full_name,contactEmail:a?.email,contactPhone:a?.phone,concept:p.concept==='membership'?'Mensualidad':p.concept==='registration'?'Inscripción':p.concept||'Pago',club:data.settings?.club_name,clubLogo:data.settings?.logo_url})}>Recibo</button>:null,canManage?<button onClick={()=>onEdit(p)}>Editar</button>:null]})}/>{receipt&&<Receipt {...receipt} title="Comprobante de pago" onClose={()=>setReceipt(null)}/>}</>}
+function paymentDisplayConcept(payment:Row){
+ if(payment.concept_label)return payment.concept_label;
+ if(payment.concept==='membership')return 'Mensualidad';
+ if(payment.concept==='registration')return 'Inscripción';
+ if(payment.concept==='product')return 'Producto';
+ return payment.concept||'Pago';
+}
+function Payments({data,canManage,onEdit}:any){
+ const [receipt,setReceipt]=useState<Row|null>(null);
+ return <>
+  <div className="stats three">
+   <Card n={money(data.payments.filter((p:Row)=>p.status==='confirmed'&&p.paid_at?.slice(0,7)===today().slice(0,7)).reduce((n:number,p:Row)=>n+Number(p.amount),0))} l="Recaudo del mes"/>
+   <Card n={data.payments.filter((p:Row)=>p.status==='pending').length} l="Pagos pendientes"/>
+   <Card n={data.payments.length} l="Movimientos"/>
+  </div>
+  <Table head={['Fecha','Deportista','Concepto','Método','Valor','Estado','Comprobante','Edición']} rows={data.payments.map((p:Row)=>{
+   const a=data.athletes.find((x:Row)=>x.id===p.athlete_id);
+   return [p.paid_at?.slice(0,10)||p.created_at?.slice(0,10),a?.full_name||'—',paymentDisplayConcept(p),p.method||'—',money(p.amount),p.status,
+    p.status==='confirmed'?<button onClick={()=>setReceipt({record:p,party:a?.full_name,contactEmail:a?.email,contactPhone:a?.phone,concept:paymentDisplayConcept(p),club:data.settings?.club_name,clubLogo:data.settings?.logo_url})}>Recibo</button>:null,
+    canManage?<button onClick={()=>onEdit(p)}>Editar</button>:null];
+  })}/>
+  {receipt&&<Receipt {...receipt} title="Comprobante de pago" onClose={()=>setReceipt(null)}/>}
+ </>;
+}
 function Products({data,onSale,onAdjust,onDelete,canManage}:any){return <div className="productgrid">{data.products.map((p:Row)=><section key={p.id}>{p.image_url&&<img className="product-reference-image" src={p.image_url} alt={`Imagen de referencia de ${p.name}`}/>}<div className="sectionhead"><div><h2>{p.name}</h2><small>{p.sku||'sin SKU'} · {p.active?'Activo':'Archivado'}</small></div><div className="actions">{canManage&&p.active&&<button onClick={()=>onDelete(p)}>Eliminar</button>}</div></div>{(p.product_variants||[]).map((v:Row)=><div className="variantrow" key={v.id}><span>{v.size||'Único'}</span><b>{money(v.price)}</b><span className={v.stock<3?'warn':''}>stock {v.stock}</span><div>{canManage&&<button onClick={()=>onAdjust(v)}>Ajustar</button>}<button disabled={v.stock<1} onClick={()=>onSale(v,p)}>Vender</button></div></div>)}</section>)}</div>}
 function Staff({data,canManage,onPay}:any){const [receipt,setReceipt]=useState<Row|null>(null);return <><Table head={['Nombre','Rol','Tarifa','Tipo','Activo','Acción']} rows={data.staff.map((s:Row)=>[s.full_name,s.role,money(s.payment_rate),s.rate_type,s.active?'Sí':'No',canManage?<button onClick={()=>onPay(s)}>Registrar pago</button>:null])}/><h2>Historial de pagos</h2><Table head={['Personal','Periodo','Concepto','Valor','Fecha','Comprobante']} rows={data.staffPayments.map((p:Row)=>{const s=data.staff.find((x:Row)=>x.id===p.staff_id);return [s?.full_name||'—',(p.period_start||'—')+' → '+(p.period_end||'—'),p.concept,money(p.amount),p.paid_at?.slice(0,10)||'—',<button onClick={()=>setReceipt({record:p,party:s?.full_name,contactEmail:s?.email,contactPhone:s?.phone,concept:p.concept||'Honorarios',period:(p.period_start||'—')+' → '+(p.period_end||'—'),club:data.settings?.club_name,clubLogo:data.settings?.logo_url})}>Comprobante</button>]})}/>{receipt&&<Receipt {...receipt} onClose={()=>setReceipt(null)}/>}</>}
 function Communications({data,exp,pending,onQueue}:any){return <><section><div className="sectionhead"><div><h2>Cola de comunicaciones</h2><small>{pending} pendientes</small></div><button onClick={onQueue}>Generar recordatorios ahora</button></div>{data.notifications.length?<Table head={['Deportista','Canal','Plantilla','Programado','Estado']} rows={data.notifications.map((n:Row)=>[data.athletes.find((a:Row)=>a.id===n.athlete_id)?.full_name||'—',n.channel,n.template,n.scheduled_for?.slice(0,16)||'—',n.status])}/>:<Empty text="La cola está vacía."/>}</section><section><h2>Acciones rápidas</h2>{exp.slice(0,10).map((m:Row)=>{const a=data.athletes.find((x:Row)=>x.id===m.athlete_id);return <div className="line" key={m.id}><div><b>{a?.full_name}</b><small>Vence {m.end_date}</small></div><div className="actions">{a?.email&&<a href={'mailto:'+a.email+'?subject=RIVER%20-%20Renovación%20de%20membresía'}>Email</a>}{a?.phone&&<a target="_blank" href={'https://wa.me/'+a.phone.replace(/\\D/g,'')}>WhatsApp</a>}{a?.phone&&<a href={'sms:'+a.phone}>SMS</a>}</div></div>})}</section></>}
@@ -188,10 +211,97 @@ function Register({data,f,setF,close}:any){return <div className="formgrid"><Sel
 function Renew({data,f,setF,close}:any){return <div className="formgrid"><Select label="Plan" value={f.plan_id} set={(v:string)=>setF({...f,plan_id:v})} options={data.plans.filter((p:Row)=>p.active).map((p:Row)=>[p.id,money(p.price)+' · '+p.name])}/><label>Inicio<input type="date" value={f.start_date||today()} onChange={e=>setF({...f,start_date:e.target.value})}/></label><Select label="Método" value={f.method||'cash'} set={(v:string)=>setF({...f,method:v})} options={methods}/><button onClick={async()=>{if(!f.plan_id)return alert('Selecciona un plan');const r=await supabase.rpc('renew_membership',{p_athlete_id:f.athlete_id,p_plan_id:f.plan_id,p_start_date:f.start_date||today(),p_method:f.method||'cash'});if(r.error)alert(r.error.message);else{alert('Membresía renovada hasta '+r.data.end_date);close();location.reload()}}}>Renovar y registrar pago</button></div>}
 const methods=[['cash','Efectivo'],['transfer','Transferencia'],['card','Tarjeta'],['other','Otro']]
 function Select({label,value,set,options}:any){return <label>{label}<select value={value||''} onChange={e=>set(e.target.value)}><option value="">Seleccionar</option>{options.map((o:any)=><option key={o[0]} value={o[0]}>{o[1]}</option>)}</select></label>}
-function PaymentForm({data,f,setF,close}:any){const planOptions=(data.plans||[]).filter((p:Row)=>p.active).map((p:Row)=>[p.name,p.name]);return <div className="formgrid"><Select label="Deportista" value={f.athlete_id} set={(v:string)=>setF({...f,athlete_id:v})} options={data.athletes.map((a:Row)=>[a.id,a.full_name])}/><Select label="Concepto" value={f.concept||'membership'} set={(v:string)=>{const plan=(data.plans||[]).find((p:Row)=>p.active&&p.name===v);setF({...f,concept:v,...(plan?{amount:String(plan.price)}:{})})}} options={[['registration','Inscripción'],['membership','Mensualidad'],['product','Producto'],...planOptions]}/><label>Valor<input type="number" min="0" value={f.amount??''} onChange={e=>setF({...f,amount:e.target.value})}/></label><Select label="Método" value={f.method||'cash'} set={(v:string)=>setF({...f,method:v})} options={methods}/><button onClick={async()=>{if(Number(f.amount||0)<0)return alert('El valor no puede ser negativo');const r=await supabase.from('payments').insert({athlete_id:f.athlete_id||null,concept:f.concept||'membership',amount:Number(f.amount||0),method:f.method,status:'confirmed',reference:f.reference||null,paid_at:new Date().toISOString()});if(r.error)alert(r.error.message);else{close();location.reload()}}}>Registrar pago</button></div>}
+function PaymentForm({data,f,setF,close}:any){
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const plans=(data.plans||[]).filter((p:Row)=>p.active);
+ const options=[['registration','Inscripción'],['membership','Mensualidad'],['product','Producto'],...plans.map((p:Row)=>['plan:'+p.id,p.name])];
+ const selected=f.plan_id?'plan:'+f.plan_id:(f.concept||'membership');
+ const changeConcept=(value:string)=>{
+  if(value.startsWith('plan:')){
+   const plan=plans.find((p:Row)=>p.id===value.slice(5));
+   if(!plan)return;
+   setF({...f,concept:'membership',plan_id:plan.id,concept_label:plan.name,amount:String(plan.price)});
+   return;
+  }
+  setF({...f,concept:value,plan_id:null,concept_label:null});
+ };
+ const save=async()=>{
+  const amount=Number(f.amount);
+  if(!Number.isFinite(amount)||amount<0)return setError('El valor debe ser un número válido igual o mayor que cero.');
+  if(f.athlete_id&&!data.athletes.some((a:Row)=>a.id===f.athlete_id))return setError('Selecciona un deportista válido.');
+  setBusy(true);setError('');
+  const {error:saveError}=await supabase.from('payments').insert({
+   athlete_id:f.athlete_id||null,concept:f.concept||'membership',
+   plan_id:f.plan_id||null,concept_label:f.plan_id?f.concept_label:null,
+   amount,method:f.method||'cash',status:'confirmed',
+   reference:f.reference||null,paid_at:new Date().toISOString()
+  });
+  setBusy(false);
+  if(saveError){setError(saveError.message||'No se pudo registrar el pago.');return;}
+  close();location.reload();
+ };
+ return <div className="formgrid">
+  <Select label="Deportista" value={f.athlete_id||''} set={(v:string)=>setF({...f,athlete_id:v||null})} options={data.athletes.map((a:Row)=>[a.id,a.full_name])}/>
+  <Select label="Concepto" value={selected} set={changeConcept} options={options}/>
+  <label>Valor<input type="number" min="0" step="0.01" value={f.amount??''} onChange={e=>setF({...f,amount:e.target.value})}/></label>
+  <Select label="Método" value={f.method||'cash'} set={(v:string)=>setF({...f,method:v})} options={methods}/>
+  {error&&<div className="error" role="alert">{error}</div>}
+  <button disabled={busy} onClick={save}>{busy?'Registrando…':'Registrar pago'}</button>
+ </div>;
+}
 
 
-function PaymentEditForm({data,f,setF,close}:any){const [busy,setBusy]=useState(false);const [error,setError]=useState('');const save=async()=>{if(!f.id)return setError('No se identificó el pago.');if(!Number.isFinite(Number(f.amount))||Number(f.amount)<0)return setError('El valor debe ser cero o mayor.');if(f.athlete_id&&!data.athletes.some((a:Row)=>a.id===f.athlete_id))return setError('Selecciona un deportista válido.');setBusy(true);setError('');const {data:result,error:rpcError}=await supabase.rpc('update_payment_admin',{p_payment_id:f.id,p_athlete_id:f.athlete_id||null,p_concept:f.concept,p_amount:Number(f.amount),p_method:f.method||null,p_reference:f.reference||null,p_status:f.status,p_paid_at:f.paid_at?new Date(f.paid_at).toISOString():null});setBusy(false);if(rpcError){setError(rpcError.message||'No se pudo actualizar el pago.');return}if(!result)return setError('No se confirmó la actualización.');close();location.reload()};return <div className="formgrid"><label>Deportista<select value={f.athlete_id||''} onChange={e=>setF({...f,athlete_id:e.target.value||null})}><option value="">Sin deportista</option>{data.athletes.map((a:Row)=><option key={a.id} value={a.id}>{a.full_name}</option>)}</select></label><Select label="Concepto" value={f.concept} set={(v:string)=>setF({...f,concept:v})} options={[['registration','Inscripción'],['membership','Mensualidad'],['product','Producto']]}/><label>Valor<input type="number" min="0" step="1" value={f.amount??''} onChange={e=>setF({...f,amount:e.target.value})}/></label><Select label="Método" value={f.method||''} set={(v:string)=>setF({...f,method:v||null})} options={methods}/><label>Referencia<input value={f.reference||''} onChange={e=>setF({...f,reference:e.target.value})}/></label><Select label="Estado" value={f.status} set={(v:string)=>setF({...f,status:v})} options={[['pending','Pendiente'],['confirmed','Confirmado'],['cancelled','Anulado']]}/><label>Fecha del pago<input type="datetime-local" value={f.paid_at||''} onChange={e=>setF({...f,paid_at:e.target.value})}/></label>{error&&<div className="error">{error}</div>}<button disabled={busy} onClick={save}>{busy?'Guardando…':'Guardar cambios'}</button></div>}
+function PaymentEditForm({data,f,setF,close}:any){
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const plans=data.plans||[];
+ const options=[
+  ['registration','Inscripción'],['membership','Mensualidad'],['product','Producto'],
+  ...plans.map((p:Row)=>['plan:'+p.id,p.name+(p.active?'':' (Archivado)')]),
+  ...(f.concept_label&&!f.plan_id?[['legacy:'+f.id,f.concept_label]]:[])
+ ];
+ const selected=f.plan_id?'plan:'+f.plan_id:(f.concept_label?'legacy:'+f.id:(f.concept||'membership'));
+ const changeConcept=(value:string)=>{
+  if(value.startsWith('plan:')){
+   const plan=plans.find((p:Row)=>p.id===value.slice(5));
+   if(!plan)return;
+   setF({...f,concept:'membership',plan_id:plan.id,concept_label:plan.name});
+   return;
+  }
+  if(value.startsWith('legacy:')){
+   setF({...f,concept:'membership',plan_id:null,concept_label:f.concept_label});
+   return;
+  }
+  setF({...f,concept:value,plan_id:null,concept_label:null});
+ };
+ const save=async()=>{
+  if(!f.id)return setError('No se identificó el pago.');
+  const amount=Number(f.amount);
+  if(!Number.isFinite(amount)||amount<0)return setError('El valor debe ser un número válido igual o mayor que cero.');
+  if(f.athlete_id&&!data.athletes.some((a:Row)=>a.id===f.athlete_id))return setError('Selecciona un deportista válido.');
+  setBusy(true);setError('');
+  const {data:result,error:rpcError}=await supabase.rpc('update_payment_admin_v2',{
+   p_payment_id:f.id,p_athlete_id:f.athlete_id||null,p_concept:f.concept,
+   p_amount:amount,p_method:f.method||null,p_reference:f.reference||null,
+   p_status:f.status,p_paid_at:f.paid_at?new Date(f.paid_at).toISOString():null,
+   p_plan_id:f.plan_id||null,p_concept_label:f.concept_label||null
+  });
+  setBusy(false);
+  if(rpcError){setError(rpcError.message||'No se pudo actualizar el pago.');return;}
+  if(!result)return setError('No se confirmó la actualización.');
+  close();location.reload();
+ };
+ return <div className="formgrid">
+  <label>Deportista<select value={f.athlete_id||''} onChange={e=>setF({...f,athlete_id:e.target.value||null})}><option value="">Sin deportista</option>{data.athletes.map((a:Row)=><option key={a.id} value={a.id}>{a.full_name}</option>)}</select></label>
+  <Select label="Concepto" value={selected} set={changeConcept} options={options}/>
+  <label>Valor<input type="number" min="0" step="0.01" value={f.amount??''} onChange={e=>setF({...f,amount:e.target.value})}/></label>
+  <Select label="Método" value={f.method||''} set={(v:string)=>setF({...f,method:v||null})} options={methods}/>
+  <label>Referencia<input value={f.reference||''} onChange={e=>setF({...f,reference:e.target.value})}/></label>
+  <Select label="Estado" value={f.status} set={(v:string)=>setF({...f,status:v})} options={[['pending','Pendiente'],['confirmed','Confirmado'],['cancelled','Anulado']]}/>
+  <label>Fecha del pago<input type="datetime-local" value={f.paid_at||''} onChange={e=>setF({...f,paid_at:e.target.value})}/></label>
+  {error&&<div className="error" role="alert">{error}</div>}
+  <button disabled={busy} onClick={save}>{busy?'Guardando…':'Guardar cambios'}</button>
+ </div>;
+}
 
 function Sale({data,f,setF,close}:any){const [busy,setBusy]=useState(false);const [error,setError]=useState('');const qty=Number(f.qty);const qtyValid=Number.isInteger(qty)&&qty>=1;const sell=async()=>{if(!f.variant?.id)return setError('No se seleccionó una variante.');if(!qtyValid)return setError('La cantidad debe ser un número entero mayor o igual a 1.');if(qty>Number(f.variant.stock||0))return setError('Stock insuficiente para esta cantidad.');setBusy(true);setError('');const r=await supabase.rpc('create_sale',{p_athlete_id:f.athlete_id||null,p_variant_id:f.variant.id,p_quantity:qty,p_method:f.method||'cash'});setBusy(false);if(r.error){setError(r.error.message||'No se pudo registrar la venta.');return}close();location.reload()};return <div className="formgrid"><div className="notice"><b>{f.product?.name||'Producto'}</b> · {f.variant?.size||'Único'}<br/>Precio unitario: <b>{money(f.variant?.price)}</b> · Stock disponible: <b>{f.variant?.stock}</b></div><Select label="Deportista (opcional)" value={f.athlete_id} set={(v:string)=>setF({...f,athlete_id:v})} options={data.athletes.map((a:Row)=>[a.id,a.full_name])}/><label>Cantidad<input type="number" min="1" max={f.variant?.stock||1} value={f.qty??''} onChange={e=>setF({...f,qty:e.target.value})}/></label><Select label="Método" value={f.method||'cash'} set={(v:string)=>setF({...f,method:v})} options={methods}/>{error&&<div className="error">{error}</div>}<button disabled={busy||!qtyValid||qty>Number(f.variant?.stock||0)} onClick={sell}>{busy?'Registrando…':'Confirmar venta · '+money(Number(f.variant?.price||0)*qty)}</button></div>}
 
