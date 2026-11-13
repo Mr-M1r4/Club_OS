@@ -190,7 +190,8 @@ create or replace function public.update_payment_admin_v3(
   p_status public.payment_status,
   p_paid_at timestamptz,
   p_plan_id uuid,
-  p_payment_concept_id uuid
+  p_payment_concept_id uuid,
+  p_concept_label text
 )
 returns boolean
 language plpgsql
@@ -262,7 +263,7 @@ begin
          concept_label = case
            when p_plan_id is not null then v_plan.name
            when p_payment_concept_id is not null then v_concept.name
-           else null
+           else p_concept_label
          end,
          amount = p_amount,
          method = nullif(trim(coalesce(p_method,'')),''),
@@ -298,11 +299,11 @@ $function$;
 
 revoke all on function public.update_payment_admin_v3(
   uuid, uuid, public.payment_concept, numeric, text, text,
-  public.payment_status, timestamptz, uuid, uuid
+  public.payment_status, timestamptz, uuid, uuid, text
 ) from public, anon;
 grant execute on function public.update_payment_admin_v3(
   uuid, uuid, public.payment_concept, numeric, text, text,
-  public.payment_status, timestamptz, uuid, uuid
+  public.payment_status, timestamptz, uuid, uuid, text
 ) to authenticated;
 
 revoke all on function private.sync_payment_plan_concept() from public, anon, authenticated;
