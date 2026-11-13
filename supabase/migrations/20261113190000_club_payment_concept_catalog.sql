@@ -120,12 +120,21 @@ begin
     if v_concept.club_id is distinct from new.club_id then
       raise exception 'El concepto no pertenece al club activo';
     end if;
-    if not v_concept.active then
+    -- An archived concept may remain attached to its existing payment,
+    -- but cannot be assigned to a new payment or swapped onto another one.
+    if not v_concept.active
+       and not (tg_op = 'UPDATE' and old.payment_concept_id is not distinct from new.payment_concept_id) then
       raise exception 'No se pueden registrar pagos con un concepto archivado';
     end if;
 
     new.concept := 'membership'::public.payment_concept;
-    new.concept_label := v_concept.name;
+    -- Keep the payment-time label immutable when the same concept is retained.
+    -- A newly selected concept receives its current name as the snapshot.
+    if tg_op = 'UPDATE' and old.payment_concept_id is not distinct from new.payment_concept_id then
+      new.concept_label := old.concept_label;
+    else
+      new.concept_label := v_concept.name;
+    end if;
     return new;
   end if;
 
