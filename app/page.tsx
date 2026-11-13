@@ -11,7 +11,7 @@ const daysLeft=(s:string)=>Math.ceil((new Date(s+'T12:00:00').getTime()-Date.now
 
 export default function App(){
  const [session,setSession]=useState<any>(null),[loading,setLoading]=useState(true),[tab,setTab]=useState('dashboard'),[recoveryMode,setRecoveryMode]=useState(false)
- const [data,setData]=useState<Row>({athletes:[],plans:[],memberships:[],payments:[],products:[],staff:[],staffPayments:[],notifications:[],sales:[],audit:[],categories:[],teams:[],sessions:[],attendance:[],arrears:[],settings:null,saasSubscriptions:[],saasPayments:[],clubs:[]})
+ const [data,setData]=useState<Row>({athletes:[],plans:[],paymentConcepts:[],memberships:[],payments:[],products:[],staff:[],staffPayments:[],notifications:[],sales:[],audit:[],categories:[],teams:[],sessions:[],attendance:[],arrears:[],settings:null,saasSubscriptions:[],saasPayments:[],clubs:[]})
  const [role,setRole]=useState('staff'),[isPlatformAdmin,setIsPlatformAdmin]=useState(false),[staffRole,setStaffRole]=useState(''),[q,setQ]=useState(''),[modal,setModal]=useState(''),[f,setF]=useState<Row>({}),[msg,setMsg]=useState(''),[reportRange,setReportRange]=useState({from:addDays(today(),-30),to:today()})
  const base=process.env.NEXT_PUBLIC_BASE_PATH||''
 
