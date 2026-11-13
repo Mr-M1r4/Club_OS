@@ -216,43 +216,13 @@ const methods=[['cash','Efectivo'],['transfer','Transferencia'],['card','Tarjeta
 function Select({label,value,set,options}:any){return <label>{label}<select value={value||''} onChange={e=>set(e.target.value)}><option value="">Seleccionar</option>{options.map((o:any)=><option key={o[0]} value={o[0]}>{o[1]}</option>)}</select></label>}
 function PaymentForm({data,f,setF,close}:any){
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
- const plans=(data.plans||[]).filter((p:Row)=>p.active);
- const options=[['registration','Inscripción'],['membership','Mensualidad'],['product','Producto'],...plans.map((p:Row)=>['plan:'+p.id,p.name])];
- const selected=f.plan_id?'plan:'+f.plan_id:(f.concept||'membership');
- const changeConcept=(value:string)=>{
-  if(value.startsWith('plan:')){
-   const plan=plans.find((p:Row)=>p.id===value.slice(5));
-   if(!plan)return;
-   setF({...f,concept:'membership',plan_id:plan.id,concept_label:plan.name,amount:String(plan.price)});
-   return;
-  }
-  setF({...f,concept:value,plan_id:null,concept_label:null});
- };
- const save=async()=>{
-  const amount=Number(f.amount);
-  if(!Number.isFinite(amount)||amount<0)return setError('El valor debe ser un número válido igual o mayor que cero.');
-  if(f.athlete_id&&!data.athletes.some((a:Row)=>a.id===f.athlete_id))return setError('Selecciona un deportista válido.');
-  setBusy(true);setError('');
-  const {error:saveError}=await supabase.from('payments').insert({
-   athlete_id:f.athlete_id||null,concept:f.concept||'membership',
-   plan_id:f.plan_id||null,concept_label:f.plan_id?f.concept_label:null,
-   amount,method:f.method||'cash',status:'confirmed',
-   reference:f.reference||null,paid_at:new Date().toISOString()
-  });
-  setBusy(false);
-  if(saveError){setError(saveError.message||'No se pudo registrar el pago.');return;}
-  close();location.reload();
- };
- return <div className="formgrid">
-  <Select label="Deportista" value={f.athlete_id||''} set={(v:string)=>setF({...f,athlete_id:v||null})} options={data.athletes.map((a:Row)=>[a.id,a.full_name])}/>
-  <Select label="Concepto" value={selected} set={changeConcept} options={options}/>
-  <label>Valor<input type="number" min="0" step="0.01" value={f.amount??''} onChange={e=>setF({...f,amount:e.target.value})}/></label>
-  <Select label="Método" value={f.method||'cash'} set={(v:string)=>setF({...f,method:v})} options={methods}/>
-  {error&&<div className="error" role="alert">{error}</div>}
-  <button disabled={busy} onClick={save}>{busy?'Registrando…':'Registrar pago'}</button>
- </div>;
+ const plans=(data.plans||[]).filter((p:Row)=>p.active),concepts=(data.paymentConcepts||[]).filter((c:Row)=>c.active);
+ const options=[...concepts.map((c:Row)=>['concept:'+c.id,c.name]),...plans.map((p:Row)=>['plan:'+p.id,p.name+' · Plan'])];
+ const selected=f.plan_id?'plan:'+f.plan_id:(f.payment_concept_id?'concept:'+f.payment_concept_id:'');
+ const changeConcept=(v:string)=>{if(v.startsWith('plan:')){const p=plans.find((x:Row)=>x.id===v.slice(5));if(p)setF({...f,concept:'membership',plan_id:p.id,payment_concept_id:null,concept_label:p.name,amount:String(p.price)});return;}const c=concepts.find((x:Row)=>x.id===v.slice(8));if(c)setF({...f,concept:'membership',plan_id:null,payment_concept_id:c.id,concept_label:c.name,amount:String(c.default_amount)});};
+ const save=async()=>{const amount=Number(f.amount);if(!selected)return setError('Selecciona un concepto de pago.');if(!Number.isFinite(amount)||amount<0)return setError('El valor debe ser un número válido igual o mayor que cero.');if(f.athlete_id&&!data.athletes.some((a:Row)=>a.id===f.athlete_id))return setError('Selecciona un deportista válido.');setBusy(true);setError('');const {error:e}=await supabase.from('payments').insert({athlete_id:f.athlete_id||null,concept:'membership',plan_id:f.plan_id||null,payment_concept_id:f.payment_concept_id||null,amount,method:f.method||'cash',status:'confirmed',reference:f.reference||null,paid_at:new Date().toISOString()});setBusy(false);if(e)return setError(e.message||'No se pudo registrar el pago.');close();location.reload();};
+ return <div className="formgrid"><Select label="Deportista" value={f.athlete_id||''} set={(v:string)=>setF({...f,athlete_id:v||null})} options={data.athletes.map((a:Row)=>[a.id,a.full_name])}/><Select label="Concepto" value={selected} set={changeConcept} options={options}/><label>Valor<input type="number" min="0" step="0.01" value={f.amount??''} onChange={e=>setF({...f,amount:e.target.value})}/></label><Select label="Método" value={f.method||'cash'} set={(v:string)=>setF({...f,method:v})} options={methods}/>{error&&<div className="error" role="alert">{error}</div>}<button disabled={busy||!selected} onClick={save}>{busy?'Registrando…':'Registrar pago'}</button></div>;
 }
-
 
 function PaymentEditForm({data,f,setF,close}:any){
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
