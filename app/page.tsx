@@ -19,10 +19,11 @@ export default function App(){
  useEffect(()=>{if(session)load()},[session])
  async function load(){
   setLoading(true)
-  const [u,a,pl,m,p,pr,s,sp,n,sa,au,ca,te,se,att,ar,settings,pa,subs,saasPay,ev,clubs]=await Promise.all([
+  const [u,a,pl,pc,m,p,pr,s,sp,n,sa,au,ca,te,se,att,ar,settings,pa,subs,saasPay,ev,clubs]=await Promise.all([
    supabase.auth.getUser(),
    supabase.from('athletes').select('*').order('full_name'),
    supabase.from('membership_plans').select('*').order('price'),
+   supabase.from('payment_concepts').select('*').order('name'),
    supabase.from('memberships').select('*').order('end_date',{ascending:false}),
    supabase.from('payments').select('*').order('paid_at',{ascending:false}),
    supabase.from('products').select('*,product_variants(*)').order('name'),
@@ -52,7 +53,7 @@ export default function App(){
    setStaffRole(me?.role||'')
    setIsPlatformAdmin((pa.data||[]).some((x:Row)=>x.user_id===user.id))
   }
-  setData({athletes:a.data||[],plans:pl.data||[],memberships:m.data||[],payments:p.data||[],products:pr.data||[],staff:s.data||[],staffPayments:sp.data||[],notifications:n.data||[],sales:sa.data||[],audit:au.data||[],categories:ca.data||[],teams:te.data||[],sessions:se.data||[],attendance:att.data||[],arrears:ar.data||[],settings:settings.data||null,saasSubscriptions:subs.data||[],saasPayments:saasPay.data||[],events:ev.data||[],clubs:clubs.data||[]})
+  setData({athletes:a.data||[],plans:pl.data||[],paymentConcepts:pc.data||[],memberships:m.data||[],payments:p.data||[],products:pr.data||[],staff:s.data||[],staffPayments:sp.data||[],notifications:n.data||[],sales:sa.data||[],audit:au.data||[],categories:ca.data||[],teams:te.data||[],sessions:se.data||[],attendance:att.data||[],arrears:ar.data||[],settings:settings.data||null,saasSubscriptions:subs.data||[],saasPayments:saasPay.data||[],events:ev.data||[],clubs:clubs.data||[]})
   setLoading(false)
  }
  const canManage=role==='owner'||role==='admin', canOperate=canManage||role==='staff'
