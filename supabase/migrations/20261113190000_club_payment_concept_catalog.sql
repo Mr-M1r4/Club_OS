@@ -152,7 +152,12 @@ begin
     raise exception 'El plan no pertenece al club activo';
   end if;
 
-  if tg_op = 'INSERT' or old.plan_id is distinct from new.plan_id then
+  if tg_op = 'INSERT' then
+    if not v_plan.active then
+      raise exception 'No se pueden registrar pagos con un plan archivado';
+    end if;
+    new.concept_label := v_plan.name;
+  elsif old.plan_id is distinct from new.plan_id then
     if not v_plan.active then
       raise exception 'No se pueden registrar pagos con un plan archivado';
     end if;
