@@ -225,55 +225,12 @@ function PaymentForm({data,f,setF,close}:any){
 }
 
 function PaymentEditForm({data,f,setF,close}:any){
- const [busy,setBusy]=useState(false),[error,setError]=useState('');
- const plans=data.plans||[];
- const options=[
-  ['registration','Inscripción'],['membership','Mensualidad'],['product','Producto'],
-  ...plans.map((p:Row)=>['plan:'+p.id,p.name+(p.active?'':' (Archivado)')]),
-  ...(f.concept_label&&!f.plan_id?[['legacy:'+f.id,f.concept_label]]:[])
- ];
- const selected=f.plan_id?'plan:'+f.plan_id:(f.concept_label?'legacy:'+f.id:(f.concept||'membership'));
- const changeConcept=(value:string)=>{
-  if(value.startsWith('plan:')){
-   const plan=plans.find((p:Row)=>p.id===value.slice(5));
-   if(!plan)return;
-   setF({...f,concept:'membership',plan_id:plan.id,concept_label:plan.name});
-   return;
-  }
-  if(value.startsWith('legacy:')){
-   setF({...f,concept:'membership',plan_id:null,concept_label:f.concept_label});
-   return;
-  }
-  setF({...f,concept:value,plan_id:null,concept_label:null});
- };
- const save=async()=>{
-  if(!f.id)return setError('No se identificó el pago.');
-  const amount=Number(f.amount);
-  if(!Number.isFinite(amount)||amount<0)return setError('El valor debe ser un número válido igual o mayor que cero.');
-  if(f.athlete_id&&!data.athletes.some((a:Row)=>a.id===f.athlete_id))return setError('Selecciona un deportista válido.');
-  setBusy(true);setError('');
-  const {data:result,error:rpcError}=await supabase.rpc('update_payment_admin_v2',{
-   p_payment_id:f.id,p_athlete_id:f.athlete_id||null,p_concept:f.concept,
-   p_amount:amount,p_method:f.method||null,p_reference:f.reference||null,
-   p_status:f.status,p_paid_at:f.paid_at?new Date(f.paid_at).toISOString():null,
-   p_plan_id:f.plan_id||null,p_concept_label:f.concept_label||null
-  });
-  setBusy(false);
-  if(rpcError){setError(rpcError.message||'No se pudo actualizar el pago.');return;}
-  if(!result)return setError('No se confirmó la actualización.');
-  close();location.reload();
- };
- return <div className="formgrid">
-  <label>Deportista<select value={f.athlete_id||''} onChange={e=>setF({...f,athlete_id:e.target.value||null})}><option value="">Sin deportista</option>{data.athletes.map((a:Row)=><option key={a.id} value={a.id}>{a.full_name}</option>)}</select></label>
-  <Select label="Concepto" value={selected} set={changeConcept} options={options}/>
-  <label>Valor<input type="number" min="0" step="0.01" value={f.amount??''} onChange={e=>setF({...f,amount:e.target.value})}/></label>
-  <Select label="Método" value={f.method||''} set={(v:string)=>setF({...f,method:v||null})} options={methods}/>
-  <label>Referencia<input value={f.reference||''} onChange={e=>setF({...f,reference:e.target.value})}/></label>
-  <Select label="Estado" value={f.status} set={(v:string)=>setF({...f,status:v})} options={[['pending','Pendiente'],['confirmed','Confirmado'],['cancelled','Anulado']]}/>
-  <label>Fecha del pago<input type="datetime-local" value={f.paid_at||''} onChange={e=>setF({...f,paid_at:e.target.value})}/></label>
-  {error&&<div className="error" role="alert">{error}</div>}
-  <button disabled={busy} onClick={save}>{busy?'Guardando…':'Guardar cambios'}</button>
- </div>;
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');const plans=data.plans||[],concepts=data.paymentConcepts||[];
+ const options=[...concepts.map((c:Row)=>['concept:'+c.id,c.name+(c.active?'':' (Archivado)')]),...plans.map((p:Row)=>['plan:'+p.id,p.name+(p.active?'':' (Archivado)')+' · Plan']),...(f.concept_label&&!f.plan_id&&!f.payment_concept_id?[['legacy:'+f.id,f.concept_label]]:[]),...(!f.plan_id&&!f.payment_concept_id&&!f.concept_label?[[f.concept||'membership',f.concept||'Concepto anterior']]:[])];
+ const selected=f.plan_id?'plan:'+f.plan_id:(f.payment_concept_id?'concept:'+f.payment_concept_id:(f.concept_label?'legacy:'+f.id:(f.concept||'membership')));
+ const changeConcept=(v:string)=>{if(v.startsWith('plan:')){const p=plans.find((x:Row)=>x.id===v.slice(5));if(p)setF({...f,concept:'membership',plan_id:p.id,payment_concept_id:null,concept_label:p.name});return;}if(v.startsWith('concept:')){const c=concepts.find((x:Row)=>x.id===v.slice(8));if(c)setF({...f,concept:'membership',plan_id:null,payment_concept_id:c.id,concept_label:c.name});return;}if(v.startsWith('legacy:')){setF({...f,plan_id:null,payment_concept_id:null});return;}setF({...f,concept:v,plan_id:null,payment_concept_id:null,concept_label:null});};
+ const save=async()=>{if(!f.id)return setError('No se identificó el pago.');const amount=Number(f.amount);if(!Number.isFinite(amount)||amount<0)return setError('El valor del pago debe ser un número válido igual o mayor que cero.');if(f.athlete_id&&!data.athletes.some((a:Row)=>a.id===f.athlete_id))return setError('Selecciona un deportista válido.');setBusy(true);setError('');const {data:result,error:e}=await supabase.rpc('update_payment_admin_v3',{p_payment_id:f.id,p_athlete_id:f.athlete_id||null,p_concept:f.concept||'membership',p_amount:amount,p_method:f.method||null,p_reference:f.reference||null,p_status:f.status,p_paid_at:f.paid_at?new Date(f.paid_at).toISOString():null,p_plan_id:f.plan_id||null,p_payment_concept_id:f.payment_concept_id||null,p_concept_label:f.concept_label||null});setBusy(false);if(e)return setError(e.message||'No se pudo actualizar el pago.');if(!result)return setError('No se confirmó la actualización.');close();location.reload();};
+ return <div className="formgrid"><label>Deportista<select value={f.athlete_id||''} onChange={e=>setF({...f,athlete_id:e.target.value||null})}><option value="">Sin deportista</option>{data.athletes.map((a:Row)=><option key={a.id} value={a.id}>{a.full_name}</option>)}</select></label><Select label="Concepto" value={selected} set={changeConcept} options={options}/><label>Valor<input type="number" min="0" step="0.01" value={f.amount??''} onChange={e=>setF({...f,amount:e.target.value})}/></label><Select label="Método" value={f.method||''} set={(v:string)=>setF({...f,method:v||null})} options={methods}/><label>Referencia<input value={f.reference||''} onChange={e=>setF({...f,reference:e.target.value})}/></label><Select label="Estado" value={f.status} set={(v:string)=>setF({...f,status:v})} options={[["pending","Pendiente"],["confirmed","Confirmado"],["cancelled","Anulado"]]}/><label>Fecha del pago<input type="datetime-local" value={f.paid_at||''} onChange={e=>setF({...f,paid_at:e.target.value})}/></label>{error&&<div className="error" role="alert">{error}</div>}<button disabled={busy} onClick={save}>{busy?'Guardando…':'Guardar cambios'}</button></div>;
 }
 
 function Sale({data,f,setF,close}:any){const [busy,setBusy]=useState(false);const [error,setError]=useState('');const qty=Number(f.qty);const qtyValid=Number.isInteger(qty)&&qty>=1;const sell=async()=>{if(!f.variant?.id)return setError('No se seleccionó una variante.');if(!qtyValid)return setError('La cantidad debe ser un número entero mayor o igual a 1.');if(qty>Number(f.variant.stock||0))return setError('Stock insuficiente para esta cantidad.');setBusy(true);setError('');const r=await supabase.rpc('create_sale',{p_athlete_id:f.athlete_id||null,p_variant_id:f.variant.id,p_quantity:qty,p_method:f.method||'cash'});setBusy(false);if(r.error){setError(r.error.message||'No se pudo registrar la venta.');return}close();location.reload()};return <div className="formgrid"><div className="notice"><b>{f.product?.name||'Producto'}</b> · {f.variant?.size||'Único'}<br/>Precio unitario: <b>{money(f.variant?.price)}</b> · Stock disponible: <b>{f.variant?.stock}</b></div><Select label="Deportista (opcional)" value={f.athlete_id} set={(v:string)=>setF({...f,athlete_id:v})} options={data.athletes.map((a:Row)=>[a.id,a.full_name])}/><label>Cantidad<input type="number" min="1" max={f.variant?.stock||1} value={f.qty??''} onChange={e=>setF({...f,qty:e.target.value})}/></label><Select label="Método" value={f.method||'cash'} set={(v:string)=>setF({...f,method:v})} options={methods}/>{error&&<div className="error">{error}</div>}<button disabled={busy||!qtyValid||qty>Number(f.variant?.stock||0)} onClick={sell}>{busy?'Registrando…':'Confirmar venta · '+money(Number(f.variant?.price||0)*qty)}</button></div>}
