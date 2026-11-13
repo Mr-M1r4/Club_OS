@@ -1,6 +1,8 @@
--- Per-club editable payment concept catalog.
--- Membership plans remain first-class because they carry duration and drive memberships;
--- both plans and general concepts are selectable as payment concepts in the UI.
+-- Per-club editable payment concept catalog for charges to athletes.
+-- membership_plans are the athlete-facing plans sold by each club and carry duration.
+-- They are NOT ClubOS SaaS subscriptions: saas_subscriptions and saas_payments
+-- remain a separate platform-billing domain, managed only by platform administrators.
+-- Both athlete plans and general athlete-payment concepts are selectable in Caja y pagos.
 
 create table if not exists public.payment_concepts (
   id uuid primary key default gen_random_uuid(),
