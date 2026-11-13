@@ -49,15 +49,10 @@ create policy payment_concepts_update on public.payment_concepts
     and private.current_role() in ('owner','admin')
   );
 
+-- Concepts are archived, not hard-deleted, to protect catalog history.
 drop policy if exists payment_concepts_delete on public.payment_concepts;
-create policy payment_concepts_delete on public.payment_concepts
-  for delete to authenticated
-  using (
-    club_id = private.current_club_id()
-    and private.current_role() in ('owner','admin')
-  );
-
-grant select, insert, update, delete on public.payment_concepts to authenticated;
+revoke delete on public.payment_concepts from public, anon, authenticated;
+grant select, insert, update on public.payment_concepts to authenticated;
 
 -- Editable starter values, not a closed or enforced list. Each club can rename,
 -- reprice, archive, or add concepts independently.
