@@ -39,9 +39,12 @@ begin
   if new.plan_id is null then
     -- A plan FK's ON DELETE SET NULL leaves concept_label unchanged. Preserve
     -- that historical snapshot. An explicit edit clears it by sending NULL.
-    if tg_op = 'UPDATE'
-       and new.concept_label is not distinct from old.concept_label then
-      new.concept_label := old.concept_label;
+    if tg_op = 'UPDATE' then
+      if new.concept_label is not distinct from old.concept_label then
+        new.concept_label := old.concept_label;
+      else
+        new.concept_label := null;
+      end if;
     else
       new.concept_label := null;
     end if;
@@ -61,12 +64,17 @@ begin
     raise exception 'El plan no pertenece al club activo';
   end if;
 
-  if tg_op = 'INSERT' or old.plan_id is distinct from new.plan_id then
+  if tg_op = 'INSERT' then
     if not v_plan.active then
       raise exception 'No se pueden registrar pagos con un plan archivado';
     end if;
     new.concept_label := v_plan.name;
-  elsif tg_op = 'UPDATE' then
+  elsif old.plan_id is distinct from new.plan_id then
+    if not v_plan.active then
+      raise exception 'No se pueden registrar pagos con un plan archivado';
+    end if;
+    new.concept_label := v_plan.name;
+  else
     new.concept_label := old.concept_label;
   end if;
 
