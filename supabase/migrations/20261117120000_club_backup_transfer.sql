@@ -128,8 +128,8 @@ begin
         'insert into public.%I select (jsonb_populate_record(null::public.%I, $1)).*
          on conflict (id) do nothing',
         v_table, v_table
-      ) using (v_row - 'club_id' - 'updated_by' - 'created_by')
-              || jsonb_build_object('club_id',v_club_id);
+      ) using ((v_row - 'club_id' - 'updated_by' - 'created_by')
+              || jsonb_build_object('club_id',v_club_id));
 
       get diagnostics v_inserted = row_count;
       if v_inserted = 1 then
