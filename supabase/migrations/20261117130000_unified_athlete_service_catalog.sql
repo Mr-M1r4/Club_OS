@@ -42,6 +42,90 @@ begin
 end;
 $$;
 
+
+create or replace function public.save_athlete_service_v1(
+  p_concept_id uuid,
+  p_plan_id uuid,
+  p_name text,
+  p_description text,
+  p_amount numeric,
+  p_duration_days integer,
+  p_active boolean
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_club_id uuid := private.current_club_id();
+  v_role text := private.current_role();
+  v_concept_id uuid := p_concept_id;
+  v_plan_id uuid := p_plan_id;
+  v_plan public.membership_plans%rowtype;
+begin
+  if v_club_id is null or v_role not in ('owner','admin') then
+    raise exception 'Solo administradores y propietarios pueden gestionar servicios';
+  end if;
+  if nullif(btrim(p_name),'') is null or length(btrim(p_name)) > 100 then
+    raise exception 'El nombre es obligatorio y no puede superar 100 caracteres';
+  end if;
+  if p_amount is null or p_amount < 0 then
+    raise exception 'El precio debe ser cero o mayor';
+  end if;
+  if p_duration_days is not null and p_duration_days <= 0 then
+    raise exception 'La duración debe ser un entero mayor que cero';
+  end if;
+
+  if v_concept_id is not null then
+    perform 1 from public.payment_concepts
+     where id=v_concept_id and club_id=v_club_id for update;
+    if not found then raise exception 'El servicio no pertenece al club activo'; end if;
+    update public.payment_concepts
+       set name=btrim(p_name), description=nullif(btrim(coalesce(p_description,'')),''),
+           default_amount=p_amount, active=coalesce(p_active,true)
+     where id=v_concept_id and club_id=v_club_id;
+  else
+    insert into public.payment_concepts(club_id,name,description,default_amount,active)
+    values(v_club_id,btrim(p_name),nullif(btrim(coalesce(p_description,'')),''),p_amount,coalesce(p_active,true))
+    returning id into v_concept_id;
+  end if;
+
+  if v_plan_id is not null then
+    select * into v_plan from public.membership_plans
+     where id=v_plan_id and club_id=v_club_id for update;
+    if not found then raise exception 'El plan no pertenece al club activo'; end if;
+    if v_plan.payment_concept_id is not null and v_plan.payment_concept_id is distinct from v_concept_id then
+      raise exception 'El plan está vinculado a otro servicio';
+    end if;
+  end if;
+
+  if p_duration_days is not null then
+    if v_plan_id is null then
+      insert into public.membership_plans(club_id,name,duration_days,price,active,payment_concept_id)
+      values(v_club_id,btrim(p_name),p_duration_days,p_amount,coalesce(p_active,true),v_concept_id)
+      returning id into v_plan_id;
+    else
+      update public.membership_plans
+         set name=btrim(p_name),duration_days=p_duration_days,price=p_amount,
+             active=coalesce(p_active,true),payment_concept_id=v_concept_id
+       where id=v_plan_id and club_id=v_club_id;
+    end if;
+  elsif v_plan_id is not null then
+    if exists(select 1 from public.memberships where plan_id=v_plan_id and club_id=v_club_id) then
+      raise exception 'Este servicio tiene membresías asociadas; no puedes quitar su duración';
+    end if;
+    delete from public.membership_plans where id=v_plan_id and club_id=v_club_id;
+    v_plan_id := null;
+  end if;
+
+  return jsonb_build_object('concept_id',v_concept_id,'plan_id',v_plan_id);
+end;
+$function$;
+
+revoke all on function public.save_athlete_service_v1(uuid,uuid,text,text,numeric,integer,boolean) from public,anon;
+grant execute on function public.save_athlete_service_v1(uuid,uuid,text,text,numeric,integer,boolean) to authenticated;
+
 create or replace function public.delete_athlete_service_v1(
   p_plan_id uuid,
   p_payment_concept_id uuid
@@ -60,6 +144,11 @@ declare
 begin
   if v_club_id is null or v_role not in ('owner','admin') then
     raise exception 'Solo administradores y propietarios pueden eliminar servicios';
+  end if;
+  if p_plan_id is null and p_payment_concept_id is not null then
+    select * into v_plan from public.membership_plans
+     where payment_concept_id=p_payment_concept_id and club_id=v_club_id for update;
+    if found then p_plan_id := v_plan.id; end if;
   end if;
   if p_plan_id is null and p_payment_concept_id is null then
     raise exception 'Selecciona un servicio válido';
