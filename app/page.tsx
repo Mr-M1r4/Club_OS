@@ -179,7 +179,7 @@ function Plans({data,canManage,onEditService,onDeleteService}:any){
  {services.length?<Table head={['Servicio','Descripción','Duración','Precio','Estado','Acción']} rows={services.map((x:Row)=>[x.name,x.description||'—',x.duration_days?x.duration_days+' días':'Sin membresía',money(x.amount),x.active?'Activo':'Archivado',canManage?<div className="actions"><button onClick={()=>onEditService(x)}>Editar</button><button onClick={()=>onDeleteService(x)}>Eliminar</button></div>:null])}/>:<Empty text="Aún no hay servicios. Crea el primero con «Nuevo servicio»."/>}
  </section>;
 }
-function ServiceForm({f,setF,close,data}:any){
+function ServiceForm({f,setF,close}:any){
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const save=async()=>{
   const name=String(f.name||'').trim(),amount=Number(f.default_amount),duration=String(f.duration_days??'').trim();
@@ -188,26 +188,14 @@ function ServiceForm({f,setF,close,data}:any){
   if(!Number.isFinite(amount)||amount<0)return setError('El precio debe ser válido y no negativo.');
   if(duration&&(!Number.isInteger(Number(duration))||Number(duration)<=0))return setError('La duración debe ser un número entero mayor que cero.');
   setBusy(true);setError('');
-  let conceptId=f.concept_id||null;
-  if(conceptId){
-   const r=await supabase.from('payment_concepts').update({name,description:f.description?.trim()||null,default_amount:amount,active:f.active!==false}).eq('id',conceptId);
-   if(r.error){setBusy(false);return setError(r.error.message);}
-  }else{
-   const r=await supabase.from('payment_concepts').insert({name,description:f.description?.trim()||null,default_amount:amount,active:f.active!==false}).select('id').single();
-   if(r.error){setBusy(false);return setError(r.error.message);}conceptId=r.data.id;
-  }
-  if(duration){
-   const payload={name,duration_days:Number(duration),price:amount,active:f.active!==false,payment_concept_id:conceptId};
-   const r=f.plan_id?await supabase.from('membership_plans').update(payload).eq('id',f.plan_id):await supabase.from('membership_plans').insert(payload);
-   if(r.error){setBusy(false);return setError('El concepto se guardó, pero no se pudo guardar su duración: '+r.error.message);}
-  }else if(f.plan_id){
-   const memberships=await supabase.from('memberships').select('id').eq('plan_id',f.plan_id).limit(1);
-   if(memberships.error){setBusy(false);return setError(memberships.error.message);}
-   if((memberships.data||[]).length){setBusy(false);return setError('Este servicio ya tiene membresías asociadas. No puedes quitarle la duración; puedes archivarlo si ya no deseas ofrecerlo.');}
-   const r=await supabase.from('membership_plans').delete().eq('id',f.plan_id);
-   if(r.error){setBusy(false);return setError(r.error.message);}
-  }
-  setBusy(false);close();location.reload();
+  const {error:e}=await supabase.rpc('save_athlete_service_v1',{
+   p_concept_id:f.concept_id||null,p_plan_id:f.plan_id||null,p_name:name,
+   p_description:f.description?.trim()||null,p_amount:amount,
+   p_duration_days:duration?Number(duration):null,p_active:f.active!==false
+  });
+  setBusy(false);
+  if(e)return setError(e.message);
+  close();location.reload();
  };
  return <div className="formgrid">
   <label>Nombre<input maxLength={100} value={f.name||''} onChange={e=>setF({...f,name:e.target.value})}/></label>
