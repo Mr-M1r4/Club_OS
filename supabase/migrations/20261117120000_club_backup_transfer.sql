@@ -55,15 +55,15 @@ declare
   v_table text;
   v_row jsonb;
   v_allowed text[] := array[
-    'categories','staff_members','teams','athletes','membership_plans',
-    'payment_concepts','products','product_variants','training_sessions',
+    'categories','staff_members','teams','athletes','payment_concepts',
+    'membership_plans','products','product_variants','training_sessions',
     'memberships','registrations','payments','sales','sale_items',
     'staff_payments','attendance','inventory_movements','events',
     'club_settings','notifications'
   ];
   v_order text[] := array[
-    'categories','staff_members','teams','athletes','membership_plans',
-    'payment_concepts','products','product_variants','training_sessions',
+    'categories','staff_members','teams','athletes','payment_concepts',
+    'membership_plans','products','product_variants','training_sessions',
     'memberships','registrations','payments','sales','sale_items',
     'staff_payments','attendance','inventory_movements','events',
     'club_settings','notifications'
