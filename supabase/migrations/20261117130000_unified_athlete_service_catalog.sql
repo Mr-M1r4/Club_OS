@@ -38,6 +38,7 @@ begin
       returning id into v_concept_id;
     end if;
     update public.membership_plans set payment_concept_id=v_concept_id where id=r.id;
+    update public.payment_concepts set default_amount=r.price, active=r.active where id=v_concept_id and club_id=r.club_id;
   end loop;
 end;
 $$;
