@@ -13,8 +13,8 @@ declare
   v_tables jsonb := '{}'::jsonb;
   v_result jsonb;
   v_allowed text[] := array[
-    'categories','staff_members','teams','athletes','membership_plans',
-    'payment_concepts','products','product_variants','training_sessions',
+    'categories','staff_members','teams','athletes','payment_concepts',
+    'membership_plans','products','product_variants','training_sessions',
     'memberships','registrations','payments','sales','sale_items',
     'staff_payments','attendance','inventory_movements','events',
     'club_settings','notifications'
@@ -72,7 +72,8 @@ declare
   v_inserted integer;
   v_total integer := 0;
   v_skipped integer := 0;
-  v_table_count integer;
+  v_payload jsonb;
+  v_club_name text;
 begin
   if v_club_id is null or v_role not in ('owner','admin') then
     raise exception 'Solo propietarios y administradores pueden importar datos';
@@ -83,6 +84,8 @@ begin
      or jsonb_typeof(p_backup->'tables') is distinct from 'object' then
     raise exception 'Archivo de respaldo ClubOS inválido o versión no compatible';
   end if;
+
+  select name into v_club_name from public.clubs where id=v_club_id;
 
   -- Reject unknown tables rather than silently trusting uploaded content.
   if exists (
@@ -99,7 +102,6 @@ begin
       raise exception 'La sección % debe ser una lista', v_table;
     end if;
 
-    v_table_count := 0;
     for v_row in select value from jsonb_array_elements(p_backup->'tables'->v_table) loop
       if jsonb_typeof(v_row) <> 'object' or nullif(v_row->>'id','') is null then
         raise exception 'Registro inválido en la sección %', v_table;
@@ -124,12 +126,20 @@ begin
         continue;
       end if;
 
+      v_payload := (v_row - 'club_id' - 'updated_by' - 'created_by')
+                   || jsonb_build_object('club_id',v_club_id);
+      if v_table = 'club_settings' then
+        v_payload := jsonb_set(v_payload,'{club_name}',to_jsonb(v_club_name),true);
+        v_payload := v_payload - 'logo_path';
+      elsif v_table = 'products' then
+        v_payload := v_payload - 'image_path';
+      end if;
+
       execute format(
         'insert into public.%I select (jsonb_populate_record(null::public.%I, $1)).*
          on conflict (id) do nothing',
         v_table, v_table
-      ) using ((v_row - 'club_id' - 'updated_by' - 'created_by')
-              || jsonb_build_object('club_id',v_club_id));
+      ) using v_payload;
 
       get diagnostics v_inserted = row_count;
       if v_inserted = 1 then
@@ -137,7 +147,6 @@ begin
       else
         v_skipped := v_skipped + 1;
       end if;
-      v_table_count := v_table_count + 1;
     end loop;
   end loop;
 
