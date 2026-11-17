@@ -57,8 +57,8 @@ export default function App(){
   setLoading(false)
  }
  const canManage=role==='owner'||role==='admin', canOperate=canManage||role==='staff'
- const nav=canOperate?['dashboard','athletes','memberships','plans','payments','products','staff','teams','attendance','arrears','reports','communications',...(canManage?['settings','audit']:[]),...(isPlatformAdmin?['billing']:[])]:['athletes','attendance']
- const labels:any={dashboard:'Dashboard',athletes:'Deportistas',memberships:'Membresías',payments:'Caja y pagos',products:'Productos e inventario',staff:'Personal',communications:'Comunicaciones',audit:'Auditoría',teams:'Equipos y categorías',attendance:'Asistencia',arrears:'Cartera y morosidad',reports:'Reportes',settings:'Configuración',plans:'Planes y servicios',billing:'Suscripciones SaaS'}
+ const nav=canOperate?['dashboard','athletes','memberships','plans','payments','products','staff','teams','attendance','arrears','reports','communications',...(canManage?['settings','audit','data']:[]),...(isPlatformAdmin?['billing']:[])]:['athletes','attendance']
+ const labels:any={dashboard:'Dashboard',athletes:'Deportistas',memberships:'Membresías',payments:'Caja y pagos',products:'Productos e inventario',staff:'Personal',communications:'Comunicaciones',audit:'Auditoría',teams:'Equipos y categorías',attendance:'Asistencia',arrears:'Cartera y morosidad',reports:'Reportes',settings:'Configuración',plans:'Planes y servicios',billing:'Suscripciones SaaS',data:'Datos y respaldo'}
  const active=data.memberships.filter((m:Row)=>m.status==='active'&&m.end_date>=today())
  const exp=active.filter((m:Row)=>daysLeft(m.end_date)<=7).sort((a:Row,b:Row)=>a.end_date.localeCompare(b.end_date))
  const month=today().slice(0,7)
@@ -111,7 +111,8 @@ export default function App(){
    {tab==='attendance'&&<Attendance data={data} canManage={canManage} onMark={(s:Row)=>{setF({session:s});setModal('attendance')}}/>}
    {tab==='arrears'&&<Arrears data={data}/>} 
    {tab==='reports'&&<Reports data={data} range={reportRange} setRange={setReportRange}/>} 
-   {tab==='settings'&&canManage&&<Settings data={data} close={close} load={load} role={role}/>} 
+   {tab==='settings'&&canManage&&<Settings data={data} close={close} load={load} role={role}/>}
+   {tab==='data'&&canManage&&<ClubDataTransfer/>} 
    {tab==='audit'&&<Audit rows={data.audit}/>} 
    {tab==='billing'&&isPlatformAdmin&&<PlatformBilling data={data} load={load}/>} 
   </main>
@@ -296,6 +297,57 @@ function AttendanceForm({data,f,close}:any){
 function Arrears({data}:any){const due=data.arrears.filter((x:Row)=>Number(x.amount_due)>0);const total=due.reduce((n:number,x:Row)=>n+Number(x.amount_due),0);return <><div className="stats three"><Card n={money(total)} l="Cartera pendiente"/><Card n={due.filter((x:Row)=>x.debt_status==='overdue').length} l="Membresías vencidas con deuda"/><Card n={due.filter((x:Row)=>x.debt_status==='pending').length} l="Pendientes actuales"/></div><Table head={['Deportista','Plan del deportista','Esperado','Pagado','Deuda','Vence','Días atraso','Estado']} rows={due.map((x:Row)=>[x.full_name,x.plan_name,money(x.expected_amount),money(x.amount_paid),money(x.amount_due),x.end_date,x.days_overdue,x.debt_status])}/></>}
 
 function Reports({data,range,setRange}:any){const inRange=(d:string)=>d&&d.slice(0,10)>=range.from&&d.slice(0,10)<=range.to;const payments=data.payments.filter((p:Row)=>p.status==='confirmed'&&inRange(p.paid_at||p.created_at));const staff=data.staffPayments.filter((p:Row)=>p.status==='confirmed'&&inRange(p.paid_at||p.created_at));const sales=data.sales.filter((s:Row)=>inRange(s.created_at));const income=payments.reduce((n:number,p:Row)=>n+Number(p.amount||0),0);const payroll=staff.reduce((n:number,p:Row)=>n+Number(p.amount||0),0);const productIncome=sales.reduce((n:number,s:Row)=>n+Number(s.total||0),0);const exportCsv=()=>{const rows=[['Reporte','RIVER Volleyball Club'],['Desde',range.from],['Hasta',range.to],[],['Indicador','Valor'],['Ingresos confirmados',income],['Ventas de productos',productIncome],['Pagos a personal',payroll],['Cartera pendiente',data.arrears.reduce((n:number,x:Row)=>n+Number(x.amount_due||0),0)]];const csv=rows.map((r:any)=>r.map((v:any)=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='river-reporte-'+range.from+'-'+range.to+'.csv';a.click()};return <><section><div className="reportcontrols"><label>Desde<input type="date" value={range.from} onChange={e=>setRange({...range,from:e.target.value})}/></label><label>Hasta<input type="date" value={range.to} onChange={e=>setRange({...range,to:e.target.value})}/></label><button onClick={exportCsv}>Exportar CSV</button><button onClick={()=>window.print()}>Imprimir / PDF</button></div></section><div className="stats"><Card n={money(income)} l="Ingresos confirmados"/><Card n={money(productIncome)} l="Ventas productos"/><Card n={money(payroll)} l="Pagos a personal"/><Card n={money(income-payroll)} l="Flujo neto registrado"/></div><div className="grid2"><section><h2>Ingresos por concepto</h2><Table head={['Concepto','Valor']} rows={[...payments.reduce((totals:Map<string,number>,p:Row)=>{const label=paymentDisplayConcept(p);totals.set(label,(totals.get(label)||0)+Number(p.amount||0));return totals},new Map<string,number>()).entries()].map(([label,total]:[string,number])=>[label,money(total)])}/></section><section><h2>Estado de cartera</h2><Table head={['Estado','Casos','Valor']} rows={['pending','overdue','paid'].map((s:string)=>[s,data.arrears.filter((x:Row)=>x.debt_status===s).length,money(data.arrears.filter((x:Row)=>x.debt_status===s).reduce((n:number,x:Row)=>n+Number(x.amount_due),0))])}/></section></div></>}
+
+function ClubDataTransfer(){
+ const [file,setFile]=useState<File|null>(null),[backup,setBackup]=useState<any>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
+ const read=async(f:File|null)=>{
+  setFile(f);setBackup(null);setError('');setMessage('');
+  if(!f)return;
+  if(f.size>25*1024*1024){setError('El respaldo supera el límite de 25 MB.');return;}
+  try{
+   const parsed=JSON.parse(await f.text());
+   if(parsed?.format!=='clubos-backup'||parsed?.version!==1||!parsed?.tables||typeof parsed.tables!=='object')throw new Error('El archivo no es un respaldo ClubOS compatible.');
+   setBackup(parsed);
+  }catch(e:any){setError(e?.message||'No se pudo leer el archivo JSON.');}
+ };
+ const exportData=async()=>{
+  setBusy(true);setError('');setMessage('');
+  const {data,error:e}=await supabase.rpc('export_club_data_v1');
+  setBusy(false);
+  if(e){setError(e.message);return;}
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='clubos-respaldo-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  setMessage('Respaldo descargado. Guárdalo en un lugar seguro: contiene datos personales y financieros del club.');
+ };
+ const importData=async()=>{
+  if(!backup)return;
+  const count=Object.values(backup.tables).reduce((n:any,rows:any)=>n+(Array.isArray(rows)?rows.length:0),0);
+  if(!confirm('Se agregarán '+count+' registros al club activo. Los registros existentes no se sobrescribirán. La importación se cancela completa si hay conflictos o errores. ¿Continuar?'))return;
+  setBusy(true);setError('');setMessage('');
+  const {data,error:e}=await supabase.rpc('import_club_data_v1',{p_backup:backup});
+  setBusy(false);
+  if(e){setError(e.message);return;}
+  setMessage('Importación completada: '+(data?.imported||0)+' registros agregados y '+(data?.skipped_existing||0)+' omitidos por existir previamente.');
+  setBackup(null);setFile(null);location.reload();
+ };
+ const count=backup?Object.values(backup.tables).reduce((n:any,rows:any)=>n+(Array.isArray(rows)?rows.length:0),0):0;
+ return <div className="stack">
+  <section><div className="sectionhead"><div><h2>Respaldo del club</h2><small>Descarga una copia de los datos operativos del club para conservarla o trasladarla a otro club de ClubOS.</small></div></div>
+   <p>Incluye deportistas, categorías, equipos, personal, planes y conceptos, membresías, pagos, productos, inventario, ventas, asistencia, entrenamientos, eventos y configuración.</p>
+   <p><strong>No incluye</strong> cuentas de acceso, contraseñas, miembros del club en la plataforma, registros de auditoría ni facturación de la suscripción comercial de ClubOS. Los archivos de imagen almacenados no se descargan dentro del respaldo.</p>
+   <button disabled={busy} onClick={exportData}>{busy?'Preparando…':'Descargar respaldo del club (.json)'}</button>
+  </section>
+  <section><div className="sectionhead"><div><h2>Importar en este club</h2><small>Selecciona un respaldo descargado desde otro club. La importación es acumulativa y no reemplaza datos existentes.</small></div></div>
+   <label>Archivo de respaldo (.json)<input type="file" accept=".json,application/json" onChange={e=>read(e.target.files?.[0]||null)}/></label>
+   {backup&&<div className="notice"><strong>Respaldo válido</strong><p>Exportado: {backup.exported_at?new Date(backup.exported_at).toLocaleString():'—'}</p><p>Registros detectados: {count}</p><p>Tablas: {Object.keys(backup.tables).length}</p><p>Archivo: {file?.name}</p></div>}
+   {error&&<div className="error" role="alert">{error}</div>}
+   {message&&<div className="notice" role="status">{message}</div>}
+   <button disabled={busy||!backup} onClick={importData}>{busy?'Importando…':'Importar datos al club activo'}</button>
+  </section>
+ </div>;
+}
 
 function Settings({data,load,role}:any){
  const s=data.settings||{}
