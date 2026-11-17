@@ -26,7 +26,7 @@ begin
 
   foreach v_table in array v_allowed loop
     execute format(
-      'select coalesce(jsonb_agg(to_jsonb(t) order by t.id), ''[]''::jsonb)
+      'select coalesce(jsonb_agg((to_jsonb(t) - 'updated_by' - 'created_by' - 'marked_by') order by t.id), ''[]''::jsonb)
          from public.%I t where t.club_id = $1',
       v_table
     ) into v_result using v_club_id;
@@ -126,7 +126,7 @@ begin
         continue;
       end if;
 
-      v_payload := (v_row - 'club_id' - 'updated_by' - 'created_by')
+      v_payload := (v_row - 'club_id' - 'updated_by' - 'created_by' - 'marked_by')
                    || jsonb_build_object('club_id',v_club_id);
       if v_table = 'club_settings' then
         v_payload := jsonb_set(v_payload,'{club_name}',to_jsonb(v_club_name),true);
