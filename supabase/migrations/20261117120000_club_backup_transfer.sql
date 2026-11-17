@@ -77,25 +77,25 @@ begin
   if v_club_id is null or v_role not in ('owner','admin') then
     raise exception 'Solo propietarios y administradores pueden importar datos';
   end if;
-  if jsonb_typeof(p_backup) <> 'object'
-     or p_backup->>'format' <> 'clubos-backup'
-     or (p_backup->>'version')::integer <> 1
-     or jsonb_typeof(p_backup->'tables') <> 'object' then
+  if jsonb_typeof(p_backup) is distinct from 'object'
+     or p_backup->>'format' is distinct from 'clubos-backup'
+     or p_backup->>'version' is distinct from '1'
+     or jsonb_typeof(p_backup->'tables') is distinct from 'object' then
     raise exception 'Archivo de respaldo ClubOS inválido o versión no compatible';
   end if;
 
   -- Reject unknown tables rather than silently trusting uploaded content.
   if exists (
     select 1
-      from jsonb_object_keys(p_backup->'tables') as k
-     where not (k = any(v_allowed))
+      from jsonb_object_keys(p_backup->'tables') as x(key)
+     where not (x.key = any(v_allowed))
   ) then
     raise exception 'El respaldo contiene tablas no permitidas';
   end if;
 
   foreach v_table in array v_order loop
     if not (p_backup->'tables' ? v_table) then continue; end if;
-    if jsonb_typeof(p_backup->'tables'->v_table) <> 'array' then
+    if jsonb_typeof(p_backup->'tables'->v_table) is distinct from 'array' then
       raise exception 'La sección % debe ser una lista', v_table;
     end if;
 
