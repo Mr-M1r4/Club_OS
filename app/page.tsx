@@ -373,7 +373,7 @@ function ClubDataTransfer(){
    <p><strong>No incluye</strong> cuentas de acceso, contraseñas, miembros del club en la plataforma, registros de auditoría ni facturación de la suscripción comercial de ClubOS. Los archivos de imagen almacenados no se descargan dentro del respaldo.</p>
    <button disabled={busy} onClick={exportData}>{busy?'Preparando…':'Descargar respaldo del club (.json)'}</button>
   </section>
-  <section><div className="sectionhead"><div><h2>Importar en este club</h2><small>Selecciona un respaldo descargado desde otro club. La importación es acumulativa y no reemplaza datos existentes.</small></div></div>
+  <section><div className="sectionhead"><div><h2>Importar en este club</h2><small>Selecciona un respaldo descargado desde otro club. La importación es acumulativa y no reemplaza datos existentes. Se recomienda un club destino vacío; los conflictos por identificadores o restricciones únicas cancelan toda la importación.</small></div></div>
    <label>Archivo de respaldo (.json)<input type="file" accept=".json,application/json" onChange={e=>read(e.target.files?.[0]||null)}/></label>
    {backup&&<div className="notice"><strong>Respaldo válido</strong><p>Exportado: {backup.exported_at?new Date(backup.exported_at).toLocaleString():'—'}</p><p>Registros detectados: {count}</p><p>Tablas: {Object.keys(backup.tables).length}</p><p>Archivo: {file?.name}</p></div>}
    {error&&<div className="error" role="alert">{error}</div>}
