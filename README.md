@@ -42,11 +42,12 @@ Supabase recomienda automatizar pruebas de RLS y casos negativos con pgTAP/CI an
 - `docs/PROJECT.md` — arquitectura y visión del producto.
 - `docs/QA-OPERATIONS.md` — plan de pruebas y operación.
 - `docs/PRODUCT-ROADMAP.md` — evolución hacia producto SaaS multi-club.
+- `docs/LEGAL/README.md` — paquete jurídico y de cumplimiento para comercialización (borradores pendientes de completar y revisión legal).
 
 ## Evolución comercial
 La siguiente transformación importante es multi-tenancy real: cada club debe quedar aislado por `club_id` mediante RLS. No se recomienda clonar manualmente una base de datos por cliente.
 
 ## Estado
-El sistema incluye ahora un panel de plataforma para administrar suscripciones SaaS y cobros por club, con periodos, vencimientos, estados e historial de pagos separados de la operación financiera de cada club.
+El sistema incluye un panel de plataforma para administrar suscripciones SaaS y cobros por club, con periodos, vencimientos, estados e historial de pagos separados de la operación financiera de cada club.
 
-La base funcional de ClubOS está implementada. Antes de comercializarla a terceros deben completarse las pruebas autenticadas end-to-end, multi-tenancy, onboarding y observabilidad.
+La base funcional de ClubOS está implementada. Antes de comercializarla a terceros deben completarse las pruebas autenticadas end-to-end, multi-tenancy, onboarding y observabilidad. Los documentos jurídicos del repositorio son borradores de trabajo: no están publicados en la aplicación ni listos para aceptación de clientes hasta completar sus campos, validar los flujos reales y obtener revisión jurídica.
